@@ -1,0 +1,6 @@
+import 'package:pointycastle/asymmetric/api.dart';
+
+const String keystoreKPrivateKeyKey = "NFCommunicatorPrivateKey";
+const String keystorePublicKeyKey = "NFCommunicatorPublicKey";
+RSAPrivateKey? privateKey;
+RSAPublicKey? publicKey;
