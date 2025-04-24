@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:basic_utils/basic_utils.dart';
+import 'package:basic_utils/basic_utils.dart' as basic_utils;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
 import 'package:pointycastle/api.dart' as pointycastle;
-import 'package:pointycastle/asymmetric/api.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class CreateKeysWidget extends StatefulWidget {
@@ -43,7 +44,22 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
       });
       _privateKeyPem = CryptoUtils.encodeRSAPrivateKeyToPem(keys!.privateKey);
       _publicKeyPem = CryptoUtils.encodeRSAPublicKeyToPem(keys!.publicKey);
-      _isStarted = false;
+      showDialog(
+        context: context,
+        builder:
+            (BuildContext context) => AlertDialog(
+              title: Text('Schlüssel erfolgreich erstellt'),
+              content: Text(
+                'Die Schlüssel wurden erfolgreich erstellt. Sie können sich jetzt die erstellten Schlüssel anschauen. Sie müssen sich diese aber natürlich nicht merken. Sobald Sie fertig sind bestätigen Sie den Prozess mit "Fertigstellen".',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(context, 'Ok'),
+                  child: const Text('Ok'),
+                ),
+              ],
+            ),
+      );
       _isCompleted = true;
     });
     //listening for accelerator data
@@ -100,6 +116,21 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
     );
   }
 
+  void _completeProcess() async {
+    if (_privateKeyPem.isEmpty || _publicKeyPem.isEmpty) {
+      throw 'At least one key was null. Something went wrong';
+    }
+    final storage = FlutterSecureStorage();
+    await storage.write(
+      key: globals.keystoreKPrivateKeyKey,
+      value: _privateKeyPem,
+    );
+    await storage.write(
+      key: globals.keystorePublicKeyKey,
+      value: _publicKeyPem,
+    );
+  }
+
   void _abortDataCollection() {
     for (final subscription in _streamSubscriptions) {
       subscription.cancel();
@@ -107,12 +138,8 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext conx) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text(widget.title),
-      //   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      // ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
@@ -214,8 +241,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      !_isStarted && _isCompleted ? _completeProcess : null,
+                  onPressed: _isCompleted ? _completeProcess : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         Theme.of(context).colorScheme.inversePrimary,
@@ -230,5 +256,3 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
     );
   }
 }
-
-void _completeProcess() {}
