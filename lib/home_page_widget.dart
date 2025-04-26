@@ -35,7 +35,15 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     return false;
   }
 
-  void _resetRsaKeys() async {}
+  void _resetRsaKeys() async {
+    final storage = FlutterSecureStorage();
+    await storage.delete(key: globals.keystoreKPrivateKeyKey);
+    await storage.delete(key: globals.keystorePublicKeyKey);
+    setState(() {
+      globals.privateKey = null;
+      globals.publicKey = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +73,8 @@ class _HomePageWidgetState extends State<HomePageWidget> {
           }
           return Center(
             child: SizedBox(
-              width: MediaQuery.of(context).size.width /2,
-              height: MediaQuery.of(context).size.width /2,
+              width: MediaQuery.of(context).size.width / 2,
+              height: MediaQuery.of(context).size.width / 2,
               child: CircularProgressIndicator(
                 color: Theme.of(context).colorScheme.inversePrimary,
               ),

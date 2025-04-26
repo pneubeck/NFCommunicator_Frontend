@@ -6,6 +6,7 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:nfcommunicator_frontend/home_page_widget.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
 import 'package:pointycastle/api.dart' as pointycastle;
@@ -128,6 +129,12 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
       key: globals.keystorePublicKeyKey,
       value: _publicKeyPem,
     );
+    if (mounted) {
+      final route = MaterialPageRoute(
+        builder: (context) => HomePageWidget(title: 'NF-Communicator'),
+      );
+      Navigator.push(context, route);
+    }
   }
 
   void _abortDataCollection() {
