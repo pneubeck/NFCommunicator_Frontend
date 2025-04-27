@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfcommunicator_frontend/chats_overview.dart';
 import 'package:nfcommunicator_frontend/create_keys_widget.dart';
-import 'package:nfcommunicator_frontend/test_widget.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 
 class HomePageWidget extends StatefulWidget {

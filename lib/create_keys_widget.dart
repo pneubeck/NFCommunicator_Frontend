@@ -23,7 +23,7 @@ class CreateKeysWidget extends StatefulWidget {
 class _CreateKeysWidget extends State<CreateKeysWidget> {
   String _collectedEntropy = '';
   String _privateKeyPem = '', _publicKeyPem = '';
-  bool _isCompleted = false, _isStarted = false;
+  bool _isCompleted = false, _isStarted = false, _isGeneratingKeys = false;
 
   final _streamSubscriptions = <StreamSubscription<dynamic>>[];
   final Duration sensorInterval = SensorInterval.normalInterval;
@@ -34,32 +34,36 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
 
   void _createKeys() {
     _isStarted = true;
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 3), () async {
       setState(() {
-        _abortDataCollection();
-        Uint8List bytes = utf8.encode(
-          md5.convert(utf8.encode(_collectedEntropy)).toString(),
-        );
-        keys = generateRSAkeyPair(createSecureRandom(bytes));
+        _isGeneratingKeys = true;
       });
-      _privateKeyPem = CryptoUtils.encodeRSAPrivateKeyToPem(keys!.privateKey);
-      _publicKeyPem = CryptoUtils.encodeRSAPublicKeyToPem(keys!.publicKey);
-      showDialog(
-        context: context,
-        builder:
-            (BuildContext context) => AlertDialog(
-              title: Text('Schlüssel erfolgreich erstellt'),
-              content: Text(
-                'Die Schlüssel wurden erfolgreich erstellt. Sie können sich jetzt die erstellten Schlüssel anschauen. Sie müssen sich diese aber natürlich nicht merken. Sobald Sie fertig sind bestätigen Sie den Prozess mit "Fertigstellen".',
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pop(context, 'Ok'),
-                  child: const Text('Ok'),
+      _abortDataCollection();
+      final Map<String, String> keyMap =
+          await PointycastleUtil.generateRSAkeyPair(_collectedEntropy);
+      setState(() {
+        _privateKeyPem = keyMap[globals.keystoreKPrivateKeyKey]!;
+        _publicKeyPem = keyMap[globals.keystorePublicKeyKey]!;
+        _isGeneratingKeys = false;
+      });
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder:
+              (BuildContext context) => AlertDialog(
+                title: Text('Schlüssel erfolgreich erstellt'),
+                content: Text(
+                  'Die Schlüssel wurden erfolgreich erstellt. Sie können sich jetzt die erstellten Schlüssel anschauen. Sie müssen sich diese aber natürlich nicht merken. Sobald Sie fertig sind bestätigen Sie den Prozess mit "Fertigstellen".',
                 ),
-              ],
-            ),
-      );
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, 'Ok'),
+                    child: const Text('Ok'),
+                  ),
+                ],
+              ),
+        );
+      }
       _isCompleted = true;
     });
     //listening for accelerator data
@@ -202,14 +206,20 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(5, 5, 5, 0),
-                          child: SingleChildScrollView(
-                            child: Text(_privateKeyPem),
+                      !_isGeneratingKeys
+                          ? Expanded(
+                            child: SingleChildScrollView(
+                              child: Text(_privateKeyPem),
+                            ),
+                          )
+                          : SizedBox(
+                            width: MediaQuery.of(context).size.width / 4,
+                            height: MediaQuery.of(context).size.width / 4,
+                            child: CircularProgressIndicator(
+                              color:
+                                  Theme.of(context).colorScheme.inversePrimary,
+                            ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -227,14 +237,20 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(5, 5, 5, 0),
-                          child: SingleChildScrollView(
-                            child: Text(_publicKeyPem),
+                      !_isGeneratingKeys
+                          ? Expanded(
+                            child: SingleChildScrollView(
+                              child: Text(_publicKeyPem),
+                            ),
+                          )
+                          : SizedBox(
+                            width: MediaQuery.of(context).size.width / 4,
+                            height: MediaQuery.of(context).size.width / 4,
+                            child: CircularProgressIndicator(
+                              color:
+                                  Theme.of(context).colorScheme.inversePrimary,
+                            ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
                 ),

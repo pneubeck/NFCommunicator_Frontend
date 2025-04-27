@@ -1,38 +1,86 @@
+import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
+import 'package:basic_utils/basic_utils.dart';
+import 'package:crypto/crypto.dart';
+import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import "package:pointycastle/export.dart";
 
-AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateRSAkeyPair(
-  SecureRandom secureRandom, {
-  int bitLength = 4096,
-}) {
-  // Create an RSA key generator and initialize it
+class PointycastleUtil {
+  static SecureRandom _createSecureRandom(Uint8List bytes) {
+    final secureRandom = SecureRandom('Fortuna')..seed(KeyParameter(bytes));
+    return secureRandom;
+  }
 
-  // final keyGen = KeyGenerator('RSA'); // Get using registry
-  final keyGen = RSAKeyGenerator();
+  static AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> _generateRSAkeyPair(
+    SecureRandom secureRandom, {
+    int bitLength = 4096,
+  }) {
+    final keyGen = RSAKeyGenerator();
+    keyGen.init(
+      ParametersWithRandom(
+        RSAKeyGeneratorParameters(BigInt.parse('65537'), bitLength, 64),
+        secureRandom,
+      ),
+    );
+    final pair = keyGen.generateKeyPair();
+    final myPublic = pair.publicKey;
+    final myPrivate = pair.privateKey;
+    return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(myPublic, myPrivate);
+  }
 
-  keyGen.init(
-    ParametersWithRandom(
-      RSAKeyGeneratorParameters(BigInt.parse('65537'), bitLength, 64),
-      secureRandom,
-    ),
-  );
-
-  // Use the generator
-
-  final pair = keyGen.generateKeyPair();
-
-  // Cast the generated key pair into the RSA key types
-
-  final myPublic = pair.publicKey;
-  final myPrivate = pair.privateKey;
-
-  return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(myPublic, myPrivate);
+  static Future<Map<String, String>> generateRSAkeyPair(
+    String collectedEntropy,
+  ) async {
+    return await Isolate.run(() {
+      Uint8List bytes = utf8.encode(
+        md5.convert(utf8.encode(collectedEntropy)).toString(),
+      );
+      AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> keys = _generateRSAkeyPair(
+        _createSecureRandom(bytes),
+      );
+      var keyMap = <String, String>{};
+      keyMap[globals.keystoreKPrivateKeyKey] =
+          CryptoUtils.encodeRSAPrivateKeyToPem(keys.privateKey);
+      keyMap[globals.keystorePublicKeyKey] =
+          CryptoUtils.encodeRSAPublicKeyToPem(keys.publicKey);
+      return keyMap;
+    });
+  }
 }
 
-SecureRandom createSecureRandom(Uint8List bytes) {
-  final secureRandom = SecureRandom('Fortuna')..seed(KeyParameter(bytes));
-  return secureRandom;
-}
+// AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateRSAkeyPair(
+//   SecureRandom secureRandom, {
+//   int bitLength = 4096,
+// }) {
+//   // Create an RSA key generator and initialize it
+
+//   // final keyGen = KeyGenerator('RSA'); // Get using registry
+//   final keyGen = RSAKeyGenerator();
+
+//   keyGen.init(
+//     ParametersWithRandom(
+//       RSAKeyGeneratorParameters(BigInt.parse('65537'), bitLength, 64),
+//       secureRandom,
+//     ),
+//   );
+
+//   // Use the generator
+
+//   final pair = keyGen.generateKeyPair();
+
+//   // Cast the generated key pair into the RSA key types
+
+//   final myPublic = pair.publicKey;
+//   final myPrivate = pair.privateKey;
+
+//   return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(myPublic, myPrivate);
+// }
+
+// SecureRandom createSecureRandom(Uint8List bytes) {
+//   final secureRandom = SecureRandom('Fortuna')..seed(KeyParameter(bytes));
+//   return secureRandom;
+// }
 
 Uint8List rsaSign(RSAPrivateKey privateKey, Uint8List dataToSign) {
   final signer = RSASigner(SHA256Digest(), '0609608648016503040201');
