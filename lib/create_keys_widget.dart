@@ -1,13 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:basic_utils/basic_utils.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfcommunicator_frontend/home_page_widget.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
+import 'package:nfcommunicator_frontend/util/nfcommunicator_repository.dart';
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
 import 'package:pointycastle/api.dart' as pointycastle;
 import 'package:sensors_plus/sensors_plus.dart';
@@ -23,8 +21,12 @@ class CreateKeysWidget extends StatefulWidget {
 class _CreateKeysWidget extends State<CreateKeysWidget> {
   String _collectedEntropy = '';
   String _privateKeyPem = '', _publicKeyPem = '';
-  bool _isCompleted = false, _isStarted = false, _isGeneratingKeys = false;
+  bool _isCompleted = false,
+      _isStarted = false,
+      _isGeneratingKeys = false,
+      _isGettingUserId = false;
 
+  final TextEditingController _textFieldController = TextEditingController();
   final _streamSubscriptions = <StreamSubscription<dynamic>>[];
   final Duration sensorInterval = SensorInterval.normalInterval;
   DateTime? _userAccelerometerUpdateTime;
@@ -124,20 +126,54 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
     if (_privateKeyPem.isEmpty || _publicKeyPem.isEmpty) {
       throw 'At least one key was null. Something went wrong';
     }
-    final storage = FlutterSecureStorage();
-    await storage.write(
-      key: globals.keystoreKPrivateKeyKey,
-      value: _privateKeyPem,
-    );
-    await storage.write(
-      key: globals.keystorePublicKeyKey,
-      value: _publicKeyPem,
-    );
+    setState(() {
+      _isGettingUserId = true;
+    });
+    final userId = await NFCommunicatorRepository().getUserId();
+    setState(() {
+      _isGettingUserId = false;
+    });
     if (mounted) {
-      final route = MaterialPageRoute(
-        builder: (context) => HomePageWidget(title: 'NF-Communicator'),
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(
+              'Jetzt fehlt nur noch ihr Benutzername. Dieser Name wird anderen Nutzern standardmäßig angezeigt wenn diese Sie als Kontakt hinzufügen.',
+            ),
+            content: TextField(
+              controller: _textFieldController,
+              decoration: InputDecoration(hintText: "Text Field in Dialog"),
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+                ),
+                onPressed: () async {
+                  final storage = FlutterSecureStorage();
+                  await storage.write(
+                    key: globals.keystoreKPrivateKeyKey,
+                    value: _privateKeyPem,
+                  );
+                  await storage.write(
+                    key: globals.keystorePublicKeyKey,
+                    value: _publicKeyPem,
+                  );
+                  final route = MaterialPageRoute(
+                    builder:
+                        (context) => HomePageWidget(title: 'NF-Communicator'),
+                  );
+                  if (context.mounted) {
+                    Navigator.push(context, route);
+                  }
+                },
+                child: !_isGettingUserId ? Text('OK') : Text('Bitte warten...'),
+              ),
+            ],
+          );
+        },
       );
-      Navigator.push(context, route);
     }
   }
 
@@ -148,13 +184,20 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
   }
 
   @override
+  void dispose() {
+    _textFieldController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext conx) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: EdgeInsets.fromLTRB(0, 4, 0, 0),
             child: Text(
               'Auf diesem Handy wurden noch keine RSA-Schlüssel gefunden. Diese werden benötigt und Nachrichten sicher zu verschlüsseln.\n\nLassen Sie uns jetzt ein Schlüssel-Paar erstellen!\nDrücken Sie hierzu auf den "Start" Button. Im Anschluss bewegen Sie ihr Handy bitte möglichst zufällig für 10 Sekunden bis Sie einen Ton hören. Schwingen Sie ihr Telefon durch die Luft und machen Sie möglichst zufällige Bewegungen! Die App sammelt in diesem Schritt Zufallsdaten für die erstellung eines möglichst sicheren RSA-Schlüsselpaares.',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -183,7 +226,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
             ),
           ),
           SizedBox(
-            height: 100,
+            height: 70,
             child: Padding(
               padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
               child: SingleChildScrollView(child: Text(_collectedEntropy)),
@@ -197,7 +240,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: EdgeInsets.fromLTRB(5, 5, 5, 0),
+                        padding: EdgeInsets.fromLTRB(5, 0, 5, 0),
                         child: Text(
                           'Privater Schlüssel:',
                           textAlign: TextAlign.start,
@@ -228,7 +271,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: EdgeInsets.fromLTRB(5, 5, 5, 0),
+                        padding: EdgeInsets.fromLTRB(5, 0, 5, 0),
                         child: Text(
                           'Öffentlicher Schlüssel:',
                           textAlign: TextAlign.start,
@@ -258,7 +301,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: SingleChildScrollView(
               child: SizedBox(
                 width: double.infinity,
@@ -268,7 +311,10 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                     backgroundColor:
                         Theme.of(context).colorScheme.inversePrimary,
                   ),
-                  child: Text('Fertigstellen'),
+                  child:
+                      !_isGettingUserId
+                          ? Text('Fertigstellen')
+                          : Text('Bitte warten...'),
                 ),
               ),
             ),
