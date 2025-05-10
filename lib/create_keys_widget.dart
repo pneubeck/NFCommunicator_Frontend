@@ -131,6 +131,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
         _isGettingUserId = true;
       });
       final userId = await NFCommunicatorRepository().getUserId();
+      //TODO -> Save to SQLite
       setState(() {
         _isGettingUserId = false;
       });
