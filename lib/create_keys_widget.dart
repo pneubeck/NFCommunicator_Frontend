@@ -131,7 +131,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
         _isGettingUserId = true;
       });
       final userId = await NFCommunicatorRepository().getUserId();
-      //TODO -> Save to SQLite2
+      if (userId < 0) throw "Retrieved UserId was < 0. Something is off";
       setState(() {
         _isGettingUserId = false;
       });
@@ -193,7 +193,10 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                   'Die Aktion konnte nicht abgeschlossen werden. Versuchen Sie es später erneut\nDer Fehler war:\n$error',
                 ),
                 actions: <Widget>[
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Ok')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Ok'),
+                  ),
                 ],
               ),
         );
