@@ -123,57 +123,80 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
   }
 
   void _completeProcess() async {
-    if (_privateKeyPem.isEmpty || _publicKeyPem.isEmpty) {
-      throw 'At least one key was null. Something went wrong';
-    }
-    setState(() {
-      _isGettingUserId = true;
-    });
-    final userId = await NFCommunicatorRepository().getUserId();
-    setState(() {
-      _isGettingUserId = false;
-    });
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(
-              'Jetzt fehlt nur noch ihr Benutzername. Dieser Name wird anderen Nutzern standardmäßig angezeigt wenn diese Sie als Kontakt hinzufügen.',
-            ),
-            content: TextField(
-              controller: _textFieldController,
-              decoration: InputDecoration(hintText: "Text Field in Dialog"),
-            ),
-            actions: <Widget>[
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-                ),
-                onPressed: () async {
-                  final storage = FlutterSecureStorage();
-                  await storage.write(
-                    key: globals.keystoreKPrivateKeyKey,
-                    value: _privateKeyPem,
-                  );
-                  await storage.write(
-                    key: globals.keystorePublicKeyKey,
-                    value: _publicKeyPem,
-                  );
-                  final route = MaterialPageRoute(
-                    builder:
-                        (context) => HomePageWidget(title: 'NF-Communicator'),
-                  );
-                  if (context.mounted) {
-                    Navigator.push(context, route);
-                  }
-                },
-                child: !_isGettingUserId ? Text('OK') : Text('Bitte warten...'),
+    try {
+      if (_privateKeyPem.isEmpty || _publicKeyPem.isEmpty) {
+        throw 'At least one key was null. Something went wrong';
+      }
+      setState(() {
+        _isGettingUserId = true;
+      });
+      final userId = await NFCommunicatorRepository().getUserId();
+      setState(() {
+        _isGettingUserId = false;
+      });
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(
+                'Jetzt fehlt nur noch ihr Benutzername. Dieser Name wird anderen Nutzern standardmäßig angezeigt wenn diese Sie als Kontakt hinzufügen.',
               ),
-            ],
-          );
-        },
-      );
+              content: TextField(
+                controller: _textFieldController,
+                decoration: InputDecoration(hintText: "Text Field in Dialog"),
+              ),
+              actions: <Widget>[
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.inversePrimary,
+                  ),
+                  onPressed: () async {
+                    final storage = FlutterSecureStorage();
+                    await storage.write(
+                      key: globals.keystoreKPrivateKeyKey,
+                      value: _privateKeyPem,
+                    );
+                    await storage.write(
+                      key: globals.keystorePublicKeyKey,
+                      value: _publicKeyPem,
+                    );
+                    final route = MaterialPageRoute(
+                      builder:
+                          (context) => HomePageWidget(title: 'NF-Communicator'),
+                    );
+                    if (context.mounted) {
+                      Navigator.push(context, route);
+                    }
+                  },
+                  child:
+                      !_isGettingUserId ? Text('OK') : Text('Bitte warten...'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isGettingUserId = false;
+        });
+        showDialog(
+          context: context,
+          builder:
+              (BuildContext context) => AlertDialog(
+                title: Text('Fehler'),
+                content: Text(
+                  'Die Aktion konnte nicht abgeschlossen werden. Versuchen Sie es später erneut\nDer Fehler war:\n$error',
+                ),
+                actions: <Widget>[
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Ok')),
+                ],
+              ),
+        );
+      }
     }
   }
 
