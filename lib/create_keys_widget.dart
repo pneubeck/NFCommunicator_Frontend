@@ -4,9 +4,11 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfcommunicator_frontend/home_page_widget.dart';
+import 'package:nfcommunicator_frontend/models/user_data.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import 'package:nfcommunicator_frontend/util/nfcommunicator_repository.dart';
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
+import 'package:nfcommunicator_frontend/util/sqllite_database_util.dart';
 import 'package:pointycastle/api.dart' as pointycastle;
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -154,6 +156,13 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
                         Theme.of(context).colorScheme.inversePrimary,
                   ),
                   onPressed: () async {
+                    final userData = UserData(
+                      userId: userId,
+                      userName: _textFieldController.text,
+                    );
+                    final dbHelper = DatabaseHelper();
+                    var insertedId = await dbHelper.insertUserData(userData);
+                    if (insertedId != userId) throw 'Unable to insert UserData';
                     final storage = FlutterSecureStorage();
                     await storage.write(
                       key: globals.keystoreKPrivateKeyKey,
