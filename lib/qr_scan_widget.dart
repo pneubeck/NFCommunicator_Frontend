@@ -39,7 +39,7 @@ class _QrScanWidget extends State<QrScanWidget> {
       final route = MaterialPageRoute(
         builder: (context) => HomePageWidget(title: 'NF-Communicator'),
       );
-      if (context.mounted) {
+      if (mounted) {
         Navigator.push(context, route);
       }
       //Navigator.pop(context);

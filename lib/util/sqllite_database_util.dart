@@ -80,7 +80,6 @@ class DatabaseHelper {
 
   Future<int> insertContact(Contact contact) async {
     final Database db = await database;
-    print('Version is: ${await db.getVersion()}');
     return await db.insert(
       'Contact',
       contact.toMap(),
@@ -90,7 +89,6 @@ class DatabaseHelper {
 
   Future<List<Contact>> getContacts() async {
     final Database db = await database;
-    print('Version is: ${await db.getVersion()}');
     final List<Map<String, dynamic>> maps = await db.query('Contact');
     var contactList = List.generate(maps.length, (i) {
       return Contact(
