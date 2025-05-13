@@ -16,7 +16,7 @@ class HomePageWidget extends StatefulWidget {
 
 class _HomePageWidgetState extends State<HomePageWidget> {
   Future _getKeys() async {
-    await Future.delayed(Duration(seconds: 3));
+    await Future.delayed(Duration(seconds: 1));
     final storage = FlutterSecureStorage();
     String? privatekeyPem = await storage.read(
       key: globals.keystoreKPrivateKeyKey,

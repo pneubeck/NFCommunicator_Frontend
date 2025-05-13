@@ -233,7 +233,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 4, 0, 0),
+            padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
             child: Text(
               'Auf diesem Handy wurden noch keine RSA-Schlüssel gefunden. Diese werden benötigt und Nachrichten sicher zu verschlüsseln.\n\nLassen Sie uns jetzt ein Schlüssel-Paar erstellen!\nDrücken Sie hierzu auf den "Start" Button. Im Anschluss bewegen Sie ihr Handy bitte möglichst zufällig für 10 Sekunden bis Sie einen Ton hören. Schwingen Sie ihr Telefon durch die Luft und machen Sie möglichst zufällige Bewegungen! Die App sammelt in diesem Schritt Zufallsdaten für die erstellung eines möglichst sicheren RSA-Schlüsselpaares.',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -241,7 +241,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -254,7 +254,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: Text(
               'Gesammelte Entropy:',
               textAlign: TextAlign.start,
@@ -264,7 +264,7 @@ class _CreateKeysWidget extends State<CreateKeysWidget> {
           SizedBox(
             height: 70,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+              padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
               child: SingleChildScrollView(child: Text(_collectedEntropy)),
             ),
           ),

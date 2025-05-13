@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:nfcommunicator_frontend/models/contact.dart';
 import 'package:nfcommunicator_frontend/qr_scan_widget.dart';
 import 'package:nfcommunicator_frontend/util/sqllite_database_util.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -13,6 +14,8 @@ class ChatsOverviewWidget extends StatefulWidget {
 }
 
 class _ChatsOverviewWidget extends State<ChatsOverviewWidget> {
+  List<Contact> _contacts = List.empty();
+
   void _showInitialAddContactDialog() async {
     try {
       if (mounted) {
@@ -128,11 +131,51 @@ class _ChatsOverviewWidget extends State<ChatsOverviewWidget> {
     }
   }
 
+  Future<List<Contact>> _getChats() async {
+    final dbHelper = DatabaseHelper();
+    _contacts = await dbHelper.getContacts();
+    return _contacts;
+  }
+
+  // Column(
+  //   children: <Widget>[
+  //     Column(
+  //       children: alo[Index]['rewards']
+  //           .values
+  //           .map<Widget>((v) => Text(v['name']))
+  //           .toList(),
+  //     ),
+  //     Text('Other widget'),
+  //   ],
+  // )
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Scaffold(),
+      body: FutureBuilder(
+        future: _getChats(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ListView(
+              padding: const EdgeInsets.all(8),
+              children: <Widget>[
+                for (var curContact in _contacts) Text(curContact.userName),
+              ],
+            );
+          }
+          return Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width / 2,
+              height: MediaQuery.of(context).size.width / 2,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.inversePrimary,
+              ),
+            ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'add',
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         tooltip: 'Neuen Kontakt hinzufügen',
         onPressed: _showInitialAddContactDialog,

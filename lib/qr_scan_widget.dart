@@ -1,6 +1,8 @@
-import 'package:basic_utils/basic_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:nfcommunicator_frontend/home_page_widget.dart';
+import 'package:nfcommunicator_frontend/models/contact.dart';
+import 'package:nfcommunicator_frontend/util/sqllite_database_util.dart';
 
 class QrScanWidget extends StatefulWidget {
   const QrScanWidget({super.key});
@@ -12,11 +14,10 @@ class QrScanWidget extends StatefulWidget {
 class _QrScanWidget extends State<QrScanWidget> {
   bool _dataScanned = false;
 
-  void _onDetected(BarcodeCapture result) {
+  void _onDetected(BarcodeCapture result) async {
+    if (_dataScanned) return;
+    _dataScanned = true;
     try {
-      setState(() {
-        _dataScanned = true;
-      });
       var scannedString = result.barcodes.first.rawValue;
       if (scannedString == null || scannedString.isEmpty) {
         throw 'Scanned data was null... something is off.';
@@ -27,7 +28,21 @@ class _QrScanWidget extends State<QrScanWidget> {
       }
       var scannedUserId = contactData[0];
       var scannedUserName = contactData[1];
-      var scannedPublicKey = CryptoUtils.rsaPublicKeyFromPem(contactData[2]);
+      var scannedPublicKey = contactData[2];
+      final dbHelper = DatabaseHelper();
+      final contact = Contact(
+        userId: int.parse(scannedUserId),
+        userName: scannedUserName,
+        publicKeyPem: scannedPublicKey,
+      );
+      await dbHelper.insertContact(contact);
+      final route = MaterialPageRoute(
+        builder: (context) => HomePageWidget(title: 'NF-Communicator'),
+      );
+      if (context.mounted) {
+        Navigator.push(context, route);
+      }
+      //Navigator.pop(context);
     } catch (error) {
       if (mounted) {
         showDialog(
@@ -53,17 +68,10 @@ class _QrScanWidget extends State<QrScanWidget> {
   @override
   Widget build(context) {
     return Scaffold(
-      body: Expanded(
-        child:
-            !_dataScanned
-                ? MobileScanner(
-                  onDetect: (result) {
-                    _onDetected(result);
-                  },
-                )
-                : CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.inversePrimary,
-                ),
+      body: MobileScanner(
+        onDetect: (result) {
+          _onDetected(result);
+        },
       ),
     );
   }
