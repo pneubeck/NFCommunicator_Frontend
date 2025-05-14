@@ -156,11 +156,27 @@ class _ChatsOverviewWidget extends State<ChatsOverviewWidget> {
         future: _getChats(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            return ListView(
-              padding: const EdgeInsets.all(8),
-              children: <Widget>[
-                for (var curContact in _contacts) Text(curContact.userName),
-              ],
+            return ListView.builder(
+              itemCount: _contacts.length,
+              itemBuilder: (context, index) {
+                final contact = _contacts[index];
+                return ListTile(
+                  title: Text(contact.userName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),),
+                  trailing: IconButton(
+                    icon: Icon(Icons.more_vert),
+                    onPressed: () {
+                      // Handle options action
+                      showModalBottomSheet(
+                        context: context,
+                        builder:
+                            (context) => ListTile(
+                              title: Text('Options for ${contact.userName}'),
+                            ),
+                      );
+                    },
+                  ),
+                );
+              },
             );
           }
           return Center(
