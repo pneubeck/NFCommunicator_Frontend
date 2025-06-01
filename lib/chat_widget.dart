@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
+import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
 
 class ChatMessage {
   final String message;
@@ -20,9 +25,16 @@ class ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
-
+    var encryptedMessage = await PointycastleUtil.rsaEncrypt(
+      globals.publicKey!,
+      Uint8List.fromList(utf8.encode(_controller.text.trim())),
+    );
+    var signedMessage = await PointycastleUtil.rsaSignAsync(
+      globals.privateKey!,
+      encryptedMessage,
+    );
     setState(() {
       _messages.add(
         ChatMessage(message: _controller.text.trim(), isSender: true),
