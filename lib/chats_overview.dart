@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:nfcommunicator_frontend/chat_widget.dart';
 import 'package:nfcommunicator_frontend/models/contact.dart';
 import 'package:nfcommunicator_frontend/qr_scan_widget.dart';
 import 'package:nfcommunicator_frontend/util/sqllite_database_util.dart';
@@ -161,7 +162,19 @@ class _ChatsOverviewWidget extends State<ChatsOverviewWidget> {
               itemBuilder: (context, index) {
                 final contact = _contacts[index];
                 return ListTile(
-                  title: Text(contact.userName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),),
+                  title: Text(
+                    contact.userName,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () {
+                    final route = MaterialPageRoute(
+                      builder:
+                          (context) => ChatScreen(title: contact.userName),
+                    );
+                    if (mounted) {
+                      Navigator.push(context, route);
+                    }
+                  },
                   trailing: IconButton(
                     icon: Icon(Icons.more_vert),
                     onPressed: () {
