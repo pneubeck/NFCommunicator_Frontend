@@ -9,13 +9,19 @@ import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import 'package:nfcommunicator_frontend/util/nfcommunicator_repository.dart';
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
 import 'package:nfcommunicator_frontend/util/sqllite_database_util.dart';
-import 'package:pointycastle/impl.dart';
 
 class ChatMessage {
   final String message;
-  final bool isSender; // true = you, false = other person
+  final bool isSender;
+  bool isSent;
+  bool isSending;
 
-  ChatMessage({required this.message, required this.isSender});
+  ChatMessage({
+    required this.message,
+    required this.isSender,
+    this.isSent = false,
+    this.isSending = true,
+  });
 }
 
 class ChatScreen extends StatefulWidget {
@@ -42,19 +48,22 @@ class ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
+    String plainText = _controller.text.trim();
+    setState(() {
+      _messages.add(
+        ChatMessage(message: plainText, isSender: true, isSending: true),
+      );
+    });
+    final int messageIndex =
+        _messages.length - 1; // Save index for updating later
     var encryptedMessage = await PointycastleUtil.rsaEncrypt(
       _contactPublicKey,
-      Uint8List.fromList(utf8.encode(_controller.text.trim())),
+      Uint8List.fromList(utf8.encode(plainText)),
     );
     var signedMessage = await PointycastleUtil.rsaSignAsync(
       globals.privateKey!,
       encryptedMessage,
     );
-    setState(() {
-      _messages.add(
-        ChatMessage(message: _controller.text.trim(), isSender: true),
-      );
-    });
     final dbHelper = DatabaseHelper();
     final userData = await dbHelper.getUserData();
     var message = Message(
@@ -64,8 +73,11 @@ class ChatScreenState extends State<ChatScreen> {
       encryptedMessage: signedMessage,
     );
     await NFCommunicatorRepository().sendMessage(message);
+    setState(() {
+      _messages[messageIndex].isSending = false;
+      _messages[messageIndex].isSent = true;
+    });
     _controller.clear();
-    // Optional: Scroll to bottom after sending
     Future.delayed(Duration(milliseconds: 100), () {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent + 60,
@@ -78,18 +90,42 @@ class ChatScreenState extends State<ChatScreen> {
   Widget _buildMessage(ChatMessage msg) {
     return Align(
       alignment: msg.isSender ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(maxWidth: 250),
-        decoration: BoxDecoration(
-          color:
-              msg.isSender
-                  ? Theme.of(context).colorScheme.inversePrimary
-                  : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Row(
+          mainAxisAlignment:
+              msg.isSender ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // ← center vertically
+          children: [
+            // Status icon (only for sender)
+            if (msg.isSender)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child:
+                    msg.isSending
+                        ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : Icon(Icons.check, size: 16, color: Colors.green),
+              ),
+
+            // Message bubble
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              constraints: BoxConstraints(maxWidth: 250),
+              decoration: BoxDecoration(
+                color:
+                    msg.isSender
+                        ? Theme.of(context).colorScheme.inversePrimary
+                        : Colors.grey[300],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(msg.message, style: TextStyle(color: Colors.black)),
+            ),
+          ],
         ),
-        child: Text(msg.message, style: TextStyle(color: Colors.black)),
       ),
     );
   }
@@ -106,7 +142,7 @@ class ChatScreenState extends State<ChatScreen> {
                 controller: _controller,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration.collapsed(
-                  hintText: 'Type a message...',
+                  hintText: 'Nachricht eingeben...',
                 ),
               ),
             ),

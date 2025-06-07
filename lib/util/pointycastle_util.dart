@@ -64,12 +64,13 @@ class PointycastleUtil {
     RSAPrivateKey myPrivate,
     Uint8List cipherText,
   ) {
-    final decryptor = OAEPEncoding(RSAEngine())..init(
-      false,
-      PrivateKeyParameter<RSAPrivateKey>(myPrivate),
-    ); // false=decrypt
-
-    return _processInBlocks(decryptor, cipherText);
+    return Future(() {
+      final decryptor = OAEPEncoding(RSAEngine())..init(
+        false,
+        PrivateKeyParameter<RSAPrivateKey>(myPrivate),
+      ); // false=decrypt
+      return _processInBlocks(decryptor, cipherText);
+    });
   }
 
   static Future<Uint8List> rsaSignAsync(
