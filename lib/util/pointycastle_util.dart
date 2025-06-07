@@ -51,11 +51,13 @@ class PointycastleUtil {
   static Future<Uint8List> rsaEncrypt(
     RSAPublicKey myPublic,
     Uint8List dataToEncrypt,
-  ) {
-    final encryptor = OAEPEncoding(RSAEngine())
-      ..init(true, PublicKeyParameter<RSAPublicKey>(myPublic)); // true=encrypt
-
-    return _processInBlocks(encryptor, dataToEncrypt);
+  ) async {
+    return Future(() {
+      final encryptor = OAEPEncoding(
+        RSAEngine(),
+      )..init(true, PublicKeyParameter<RSAPublicKey>(myPublic)); // true=encrypt
+      return _processInBlocks(encryptor, dataToEncrypt);
+    });
   }
 
   static Future<Uint8List> rsaDecrypt(

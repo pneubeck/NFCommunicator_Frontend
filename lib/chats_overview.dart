@@ -169,7 +169,7 @@ class _ChatsOverviewWidget extends State<ChatsOverviewWidget> {
                   onTap: () {
                     final route = MaterialPageRoute(
                       builder:
-                          (context) => ChatScreen(title: contact.userName),
+                          (context) => ChatScreen(contact: contact,),
                     );
                     if (mounted) {
                       Navigator.push(context, route);
