@@ -1,4 +1,5 @@
 import 'package:nfcommunicator_frontend/models/contact.dart';
+import 'package:nfcommunicator_frontend/models/message.dart';
 import 'package:nfcommunicator_frontend/models/user_data.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -23,7 +24,7 @@ class DatabaseHelper {
     // Open or create the database at the specified path
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (Database db, int version) async {
         // Create the tasks table
         await db.execute('''
@@ -45,6 +46,22 @@ class DatabaseHelper {
             chatType INTEGER,
             userId INTEGER,
             groupChatId INTEGER            
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE Messages(
+            messageId INTEGER PRIMARY KEY,
+            creationDate TEXT,
+            lastUpdateDate Text,
+            deletionDate TEXT,
+            messageSentDate TEXT,
+            senderUserId INTEGER,
+            recipientUserId INTEGER,
+            messageType INTEGER,
+            groupChatId INTEGER,
+            encryptedMessage BLOB,
+            decryptedMessage TEXT,   
+            decryptedMessageBlob BLOB         
           )
         ''');
       },
@@ -75,7 +92,54 @@ class DatabaseHelper {
           )
         ''');
         break;
+      case 4:
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Messages(
+            messageId INTEGER PRIMARY KEY,
+            creationDate TEXT,
+            lastUpdateDate Text,
+            deletionDate TEXT,
+            messageSentDate TEXT,
+            senderUserId INTEGER,
+            recipientUserId INTEGER,
+            messageType INTEGER,
+            groupChatId INTEGER,
+            encryptedMessage BLOB,
+            decryptedMessage TEXT,   
+            decryptedMessageBlob BLOB         
+          )
+        ''');
+        break;
     }
+  }
+
+  Future<int> insertMessage(Message message) async {
+    final Database db = await database;
+    return await db.insert(
+      'Messages',
+      message.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.fail,
+    );
+  }
+
+  Future<int> updateMessage(Message message) async {
+    final Database db = await database;
+    return await db.update(
+      'Messages', 
+      message.toMap(), 
+      where: 'messageId = ${message.messageId}');
+  }
+
+  Future<List<Message>> getMessages(int userId) async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'Messages',
+      where: 'senderUserId = $userId OR recipientUserId = $userId',
+    );
+    var messageList = List.generate(maps.length, (i) {
+      return Message.fromMap(maps[i]);
+    });
+    return messageList;
   }
 
   Future<int> insertContact(Contact contact) async {

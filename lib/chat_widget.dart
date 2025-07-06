@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:basic_utils/basic_utils.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nfcommunicator_frontend/models/contact.dart';
 import 'package:nfcommunicator_frontend/models/message.dart';
+import 'package:nfcommunicator_frontend/models/user_data.dart';
 import 'package:nfcommunicator_frontend/util/globals.dart' as globals;
 import 'package:nfcommunicator_frontend/util/nfcommunicator_repository.dart';
 import 'package:nfcommunicator_frontend/util/pointycastle_util.dart';
@@ -24,6 +27,11 @@ class ChatMessage {
   });
 }
 
+List<Message> getMessages(int userId) {
+  //TODO->Load potential new messages from backend
+  return messageMaps.map((map) => Message.fromMap(map)).toList();
+}
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.contact});
   final Contact contact;
@@ -37,13 +45,81 @@ class ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late RSAPublicKey _contactPublicKey;
+  late UserData _userData;
+  Timer? _messageLoadTimer;
 
   @override
   void initState() {
     super.initState();
+    final dbHelper = DatabaseHelper();
+    Future(() async {
+      _userData = await dbHelper.getUserData();
+    });
     _contactPublicKey = CryptoUtils.rsaPublicKeyFromPem(
       widget.contact.publicKeyPem,
     );
+    _messageLoadTimer = Timer.periodic(Duration(seconds: 10), (timer) {
+      loadMessages();
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageLoadTimer?.cancel();
+    super.dispose();
+  }
+
+  void loadMessages() async {
+    // Heavy computation runs in a background isolate using compute()
+    final newMessages = await compute(getMessages, _userData.userId);
+    newMessages.sort((a, b) {
+      // Use `?? DateTime(0)` to handle nulls and push them to the end
+      final dateA = a.creationDate ?? DateTime(0);
+      final dateB = b.creationDate ?? DateTime(0);
+      return dateA.compareTo(dateB); // descending order
+    });
+    //then add them to message list like
+    var dbHelper = DatabaseHelper();
+    var userData = await dbHelper.getUserData();
+    for (final msg in newMessages) {
+      _messages.add(
+        ChatMessage(
+          message: msg.decryptedMessage!,
+          isSender: msg.senderUserId == userData.userId,
+          isSending:
+              msg.messageSentDate == DateTime(0)
+                  ? true
+                  : false, // or true if it's still sending
+        ),
+      );
+    }
+    setState(() {});
+  }
+
+  Future getInitialMessages() async {
+    var dbHelper = DatabaseHelper();
+    var messages = await dbHelper.getMessages(widget.contact.userId);
+    messages.sort((a, b) {
+      // Use `?? DateTime(0)` to handle nulls and push them to the end
+      final dateA = a.creationDate ?? DateTime(0);
+      final dateB = b.creationDate ?? DateTime(0);
+      return dateA.compareTo(dateB); // descending order
+    });
+    //then add them to message list like
+    var userData = await dbHelper.getUserData();
+    for (final msg in messages) {
+      _messages.add(
+        ChatMessage(
+          message: msg.decryptedMessage!,
+          isSender: msg.senderUserId == userData.userId,
+          isSending:
+              msg.messageSentDate == DateTime(0)
+                  ? true
+                  : false, // or true if it's still sending
+        ),
+      );
+    }
+    return true;
   }
 
   void _sendMessage() async {
@@ -64,19 +140,22 @@ class ChatScreenState extends State<ChatScreen> {
       globals.privateKey!,
       encryptedMessage,
     );
-    final dbHelper = DatabaseHelper();
-    final userData = await dbHelper.getUserData();
     var message = Message(
-      senderUserId: userData.userId,
+      creationDate: DateTime.now(),
+      lastUpdateDate: DateTime.now(),
+      senderUserId: _userData.userId,
       recipientUserId: widget.contact.userId,
       messageType: MessageType.text,
       encryptedMessage: signedMessage,
     );
+    message.messageId = await DatabaseHelper().insertMessage(message);
     await NFCommunicatorRepository().sendMessage(message);
     setState(() {
       _messages[messageIndex].isSending = false;
       _messages[messageIndex].isSent = true;
     });
+    message.messageSentDate = DateTime.now();
+    await DatabaseHelper().updateMessage(message);
     _controller.clear();
     Future.delayed(Duration(milliseconds: 100), () {
       _scrollController.animateTo(
@@ -166,20 +245,36 @@ class ChatScreenState extends State<ChatScreen> {
         title: Text(widget.contact.userName),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessage(_messages[index]);
-              },
+      body: FutureBuilder(
+        future: getInitialMessages(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      return _buildMessage(_messages[index]);
+                    },
+                  ),
+                ),
+                Divider(height: 1),
+                _buildInputArea(),
+              ],
+            );
+          }
+          return Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width / 2,
+              height: MediaQuery.of(context).size.width / 2,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.inversePrimary,
+              ),
             ),
-          ),
-          Divider(height: 1),
-          _buildInputArea(),
-        ],
+          );
+        },
       ),
     );
   }
