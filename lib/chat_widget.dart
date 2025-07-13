@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:basic_utils/basic_utils.dart';
 import 'package:flutter/foundation.dart';
@@ -27,9 +26,8 @@ class ChatMessage {
   });
 }
 
-List<Message> getMessages(int userId) {
-  //TODO->Load potential new messages from backend
-  return messageMaps.map((map) => Message.fromMap(map)).toList();
+Future<List<Message>> getMessages(int userId) async {
+  return await NFCommunicatorRepository().getMessages(userId);
 }
 
 class ChatScreen extends StatefulWidget {

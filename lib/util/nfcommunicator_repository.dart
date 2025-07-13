@@ -23,4 +23,14 @@ class NFCommunicatorRepository {
     }
     throw "Unable to get a UserId from backen";
   }
+
+  Future<List<Message>> getMessages(int userId) async {
+    var uri = Uri.parse('${globals.webApiBaseUrl}GetMessages?userId=$userId');
+    var response = await http.get(uri);
+    if (response.statusCode == 200) {
+      List<dynamic> data = json.decode(response.body);
+      return data.map((json) => Message.fromMap(json)).toList();
+    }
+    throw "Unable to get messages from backend";
+  }
 }
